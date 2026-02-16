@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  MAINTENANCE
+  RETIRED
+}
+
+enum Condition {
+  NEW
+  GOOD
+  FAIR
+  POOR
+  BROKEN
+}
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(EMPLOYEE)
+  department    String?
+  jobTitle      String?
+  
+  accounts      Account[]
+  sessions      Session[]
+  
+  assignments   Assignment[]
+  auditLogs     AuditLog[]
+  assets        Asset[]      @relation("CurrentAssignment")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Asset {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  serialNumber    String      @unique
+  name            String
+  model           String?
+  category        String      // Laptop, Monitor, Peripheral, etc.
+  status          AssetStatus @default(AVAILABLE)
+  condition       Condition   @default(NEW)
+  
+  // Procurement Info
+  purchaseDate    DateTime?
+  purchasePrice   Float?
+  warrantyExpiry  DateTime?
+  vendor          String?
+  location        String?     // Office location
+  
+  // Assignment
+  assignedToId    String?     @db.ObjectId
+  assignedTo      User?       @relation("CurrentAssignment", fields: [assignedToId], references: [id])
+  
+  assignments     Assignment[]
+  maintenanceLogs MaintenanceLog[]
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model Assignment {
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  assetId            String    @db.ObjectId
+  asset              Asset     @relation(fields: [assetId], references: [id])
+  employeeId         String    @db.ObjectId
+  employee           User      @relation(fields: [employeeId], references: [id])
+  
+  assignedAt         DateTime  @default(now())
+  expectedReturnDate DateTime?
+  returnedAt         DateTime?
+  status             String    @default("ACTIVE") // ACTIVE, RETURNED
+  
+  notes              String?
+  receiptUrl         String?   // For e-sign acknowledgement
+}
+
+model MaintenanceLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  assetId     String   @db.ObjectId
+  asset       Asset    @relation(fields: [assetId], references: [id])
+  
+  date        DateTime @default(now())
+  description String
+  cost        Float?
+  performedBy String?
+  
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String?  @db.ObjectId
+  user       User?    @relation(fields: [userId], references: [id])
+  
+  action     String   // e.g., "CREATE_ASSET", "ASSIGN_ASSET"
+  entityType String   // e.g., "Asset", "User"
+  entityId   String?
+  details    String?  // JSON string or summary
+  
+  createdAt  DateTime @default(now())
+}

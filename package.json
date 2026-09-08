@@ -9,11 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.29",
-    "@ai-sdk/openai": "^3.0.28",
+    "@ai-sdk/google": "^3.0.121",
+    "@ai-sdk/openai": "^3.0.109",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^7.4.0",
-    "ai": "^6.0.85",
+    "ai": "^6.0.277",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
